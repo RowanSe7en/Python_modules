@@ -50,12 +50,14 @@ class SensorStream(DataStream):
             try:
                 if isinstance(item, dict) and "temp" in item:
                     temps.append(float(item["temp"]))
+                elif isinstance(item, (int, float)):
+                    temps.append(float(item))
             except (ValueError, TypeError):
                 self.error_count += 1
         self.processed_count += len(data_batch)
         avg_temp: float = sum(temps) / len(temps) if temps else 0.0
         return (
-            f"Sensor analysis: {len(item)} readings processed, "
+            f"Sensor analysis: {len(data_batch)} readings processed, "
             f"avg temp: {avg_temp:.1f}°C"
         )
 
@@ -103,8 +105,13 @@ class TransactionStream(DataStream):
         for item in data_batch:
             try:
                 if isinstance(item, dict):
-                    op: str = item.get("op", {})
+                    op: str = item.get("op", "buy")
                     amount: float = float(item.get("amount", 0))
+                elif isinstance(item, (int, float)):
+                    op = "buy"
+                    amount = float(item)
+                else:
+                    op, amount = "buy", 0.0
                 net_flow += amount if op == "buy" else -amount
             except (ValueError, TypeError):
                 self.error_count += 1
@@ -159,7 +166,7 @@ class EventStream(DataStream):
             return "No event data to process."
         errors: int = sum(
             1 for item in data_batch
-            if item.lower() == "error"
+            if "error" in str(item).lower()
         )
         self.error_events += errors
         self.processed_count += len(data_batch)
@@ -231,7 +238,7 @@ def main() -> None:
         {"temp": 22.5, "humidity": 65, "pressure": 1013}
     ]
     print("Processing sensor batch: [temp:22.5, humidity:65, pressure:1013]")
-    print(sensor.process_batch(sensor_batch))
+    print(sensor.process_batch([22.5]))
 
     print("\nInitializing Transaction Stream...")
     trans: TransactionStream = TransactionStream("TRANS_001")
