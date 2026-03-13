@@ -24,48 +24,94 @@ class NumericProcessor(DataProcessor):
     """Processor for numeric list data."""
 
     def validate(self, data: Any) -> bool:
-        try:
-            return bool(data) and all(isinstance(x, (int, float)) for x in data)
-        except TypeError:
-            return False
+
+        return bool(data) and isinstance(data, (int, float, set, tuple, list))
 
     def process(self, data: Any) -> str:
 
-        count = len(data)
-        total = sum(data)
-        avg = total / count
+        if isinstance(data, (list, set, tuple)):
+
+            count = len(data)
+            total = sum(data)
+            avg = total / count
+
+        elif isinstance(data, (int, float)):
+
+            return f"Processed 1 numeric values, sum={data}, avg={data}"
 
         return f"Processed {count} numeric values, sum={total}, avg={avg}"
+
+    def format_output(self, result: str) -> str:
+        """overridden format_output method for NumericProcessor"""
+        return f"Output: {result}\n"
 
 
 class TextProcessor(DataProcessor):
     """Processor for text data."""
 
     def validate(self, data: Any) -> bool:
-        return isinstance(data, str)
+        return isinstance(data, (str, list, tuple, set))
 
     def process(self, data: Any) -> str:
 
-        char_count = len(data)
-        word_count = len(data.split())
+        if isinstance(data, str):
+
+            char_count = len(data)
+            word_count = len(data.split())
+
+        elif isinstance(data, (list, tuple, set)):
+
+            char_count = 0
+            word_count = 0
+            for ele in data:
+
+                char_count += len(ele)
+                word_count += len(ele.split())
 
         return f"Processed text: {char_count} characters, {word_count} words"
+
+    def format_output(self, result: str) -> str:
+        """overridden format_output method for TextProcessor"""
+        return f"Output: {result}\n"
 
 
 class LogProcessor(DataProcessor):
     """Processor for log entry strings."""
 
     def validate(self, data: Any) -> bool:
-        if not isinstance(data, str):
-            return False
-        return ":" in data
+
+        if isinstance(data, str):
+            return ":" in data
+
+        elif isinstance(data, (list, set, tuple)):
+
+            for item in data:
+                if not isinstance(item, str) and ":" in item:
+                    return False
+            return True
+
+        return False
 
     def process(self, data: Any) -> str:
 
-        level, message = data.split(":", 1)
-        message = message.strip()
+        if isinstance(data, str):
+            level, message = data.split(":", 1)
+            message = message.strip()
+            return f"[{level}] {level} level detected: {message}"
 
-        return f"[{level}] {level} level detected: {message}"
+        elif isinstance(data, (list, set, tuple)):
+
+            results = []
+
+            for item in data:
+                level, message = item.split(":", 1)
+                message = message.strip()
+                results.append(f"[{level}] {level} level detected: {message}")
+            return "\n".join(results)
+
+    def format_output(self, result: str) -> str:
+        """overridden format_output method for LogProcessor"""
+        return f"Output: {result}\n"
 
 
 def main() -> None:
@@ -102,7 +148,7 @@ def main() -> None:
 
     print("Initializing Log Processor...")
     log_processor = LogProcessor()
-    log_data = "ERROR: Connection timeout"
+    log_data = ["ERROR: Connection timeout", "sgeg: wg timGEWeout"]
     print(f'Processing data: "{log_data}"')
     try:
         if log_processor.validate(log_data):
@@ -124,15 +170,9 @@ def main() -> None:
     ]
 
     data_samples = [
-    [1, 2, 3],
-    "Hello sweety",
-    "INFO: System ready",
-]
-
-    processors = [
-        NumericProcessor(),
-        TextProcessor(),
-        LogProcessor(),
+        [1, 2, 3],
+        "Hello sweety",
+        "INFO: System ready",
     ]
 
     for i in range(len(processors)):
@@ -143,7 +183,7 @@ def main() -> None:
             result = processor.process(data)
             print("Result", i + 1, ":", result)
         except Exception as error:
-            print("Result", i + 1, ": Error -", error)
+            print("Result", i + 1, ": Error :", error)
 
     print("\nFoundation systems online. Nexus ready for advanced streams.")
 
